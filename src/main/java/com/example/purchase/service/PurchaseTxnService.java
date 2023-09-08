@@ -6,7 +6,7 @@ import com.example.purchase.persistence.dao.PurchaseTxnRepository;
 import com.example.purchase.persistence.model.PurchaseTxn;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import javax.annotation.Nonnull;
 
@@ -15,7 +15,7 @@ import javax.annotation.Nonnull;
  */
 @RequiredArgsConstructor
 @Slf4j
-@Component
+@Service
 public class PurchaseTxnService {
     private final PurchaseTxnRepository repository;
 
@@ -23,9 +23,7 @@ public class PurchaseTxnService {
         // fields already validated
         PurchaseTxn data = repository.save(PurchaseTxnMapper.INSTANCE.dtoToPurchaseTxn(dto));
 
-        PurchaseTxnDto createdDto = PurchaseTxnMapper.INSTANCE.purchaseTxnToDto(data);
-        createdDto.setId(data.getId());
-        return createdDto;
+        return PurchaseTxnMapper.INSTANCE.purchaseTxnToDto(data);
     }
 
 }

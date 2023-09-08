@@ -20,6 +20,7 @@ public class PurchaseTxnMapper {
 
         var dto = new PurchaseTxnDto();
 
+        dto.setId(data.getId());
         dto.setDescription(data.getDescription());
         dto.setTxnDate(fromInstant(data.getTxnDate()));
         dto.setAmount(data.getAmount());
@@ -34,6 +35,7 @@ public class PurchaseTxnMapper {
 
         var data = new PurchaseTxn();
 
+        data.setId(dto.getId());
         data.setDescription(dto.getDescription());
         data.setTxnDate(toInstant(dto.getTxnDate()));
         data.setAmount(dto.getAmount());
