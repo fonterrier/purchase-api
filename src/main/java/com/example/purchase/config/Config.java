@@ -21,7 +21,7 @@ public class Config {
   }
 
   @Bean
-  OkHttpClient httpClient() {
+  public OkHttpClient httpClient() {
     return new OkHttpClient().newBuilder().build();
   }
 
