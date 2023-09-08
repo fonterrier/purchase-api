@@ -1,5 +1,7 @@
 package com.example.purchase.controller;
 
+import com.example.purchase.api.model.ErrorDetailsDto;
+import com.example.purchase.api.model.PurchaseTxnCurrencyDto;
 import com.example.purchase.api.model.PurchaseTxnDto;
 import com.example.purchase.service.PurchaseTxnService;
 import com.example.purchase.support.TestHelper;
@@ -9,14 +11,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
@@ -72,7 +77,7 @@ class PurchaseTxnControllerTest {
 
     // check all validations (field length, cents rounding)
     @Test
-    void postPurchaseTxn2_invalidParameters_isBadRequest() throws Exception {
+    void postPurchaseTxn_invalidParameters_isBadRequest() throws Exception {
         PurchaseTxnDto dto = TestHelper.createValidPurchaseTxnDto();
         dto.setDescription("Verylonglonglonglongerthan50characterssolonglonglonglonglonglonglonglonglonglong");
         assertEquals(400, performPostPurchaseTxn(dto).getStatus());
@@ -101,16 +106,38 @@ class PurchaseTxnControllerTest {
     // happy path test
     @Test
     void getPurchaseTxn() throws Exception {
-        this.mockMvc.perform(
+        given(purchaseTxnService.getPurchaseTxnCurrency(any(), any())).willReturn(new PurchaseTxnCurrencyDto());
+
+        MockHttpServletResponse response = this.mockMvc.perform(
                         get(API_PATH + "/" + UUID.randomUUID())
                                 .queryParam("countryCurrencyDesc", "Mexico-Peso")
                 )
-                .andExpect(status().is(200));
+                .andExpect(status().is(200))
+                .andReturn().getResponse();
+
+        assertNotNull(objectMapper.readValue(response.getContentAsString(), PurchaseTxnCurrencyDto.class));
     }
 
     @Test
     void getPurchaseTxn_missingParameters_isBadRequest() throws Exception {
         this.mockMvc.perform(get(API_PATH + "/" + UUID.randomUUID())).andExpect(status().is(400));
+    }
+
+    @Test
+    void getPurchaseTxn_httpException() throws Exception {
+        HttpClientErrorException ex = new HttpClientErrorException(HttpStatus.NOT_FOUND, "msg");
+        given(purchaseTxnService.getPurchaseTxnCurrency(any(), any())).willThrow(ex);
+
+        MockHttpServletResponse response = this.mockMvc.perform(
+                        get(API_PATH + "/" + UUID.randomUUID())
+                                .queryParam("countryCurrencyDesc", "Mexico-Peso")
+                )
+                .andExpect(status().is(404))
+                .andReturn().getResponse();
+
+        ErrorDetailsDto errorDetails = objectMapper.readValue(response.getContentAsString(), ErrorDetailsDto.class);
+        assertEquals(404, errorDetails.getCode());
+        assertEquals("msg", errorDetails.getMessage());
     }
 
 }

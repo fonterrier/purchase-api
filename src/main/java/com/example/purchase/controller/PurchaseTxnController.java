@@ -2,14 +2,16 @@ package com.example.purchase.controller;
 
 import com.example.purchase.api.api.PurchaseTxnApiDelegate;
 import com.example.purchase.api.model.ErrorDetailsDto;
-import com.example.purchase.api.model.PurchaseTxnDto;
 import com.example.purchase.api.model.PurchaseTxnCurrencyDto;
+import com.example.purchase.api.model.PurchaseTxnDto;
 import com.example.purchase.service.PurchaseTxnService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.client.HttpClientErrorException;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.util.ArrayList;
@@ -17,6 +19,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * HTTP/API layer logic
+ */
 @RequiredArgsConstructor
 @Slf4j
 @Controller
@@ -39,14 +44,23 @@ public class PurchaseTxnController implements PurchaseTxnApiDelegate {
                 .body(created);
     }
 
-    // TODO: dummy implementations for now
     @Override
-    public ResponseEntity<PurchaseTxnCurrencyDto> getPurchaseTxn(UUID id, String countryCurrencyDesc) {
+    public ResponseEntity getPurchaseTxn(UUID id, String countryCurrencyDesc) {
         log.info("Received getPurchaseTxn request");
 
-        PurchaseTxnCurrencyDto dto = new PurchaseTxnCurrencyDto();
+        try {
+            PurchaseTxnCurrencyDto dto = purchaseTxnService.getPurchaseTxnCurrency(id, countryCurrencyDesc);
+            return ResponseEntity.ok(dto);
+        } catch (HttpClientErrorException e) {
+            ErrorDetailsDto errorDto = new ErrorDetailsDto();
+            errorDto.setCode(e.getRawStatusCode());
+            errorDto.setMessage(e.getStatusText());
 
-        return ResponseEntity.ok(dto);
+            return ResponseEntity.status(e.getStatusCode())
+                    .body(errorDto);
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     /**
