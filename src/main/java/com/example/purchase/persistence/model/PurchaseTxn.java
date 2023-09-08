@@ -17,6 +17,7 @@ public class PurchaseTxn {
 
     @Id
     @GeneratedValue
+    @Column(length = 16)
     private UUID id;
 
     @Column(length = 50, nullable = false)

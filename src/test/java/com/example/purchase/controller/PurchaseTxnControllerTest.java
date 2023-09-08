@@ -1,11 +1,14 @@
 package com.example.purchase.controller;
 
 import com.example.purchase.api.model.PurchaseTxnDto;
+import com.example.purchase.service.PurchaseTxnService;
 import com.example.purchase.support.TestHelper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
@@ -14,6 +17,10 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -31,6 +38,13 @@ class PurchaseTxnControllerTest {
     private MockMvc mockMvc;
     @Autowired
     private ObjectMapper objectMapper;
+    @MockBean
+    private PurchaseTxnService purchaseTxnService;
+
+    @BeforeEach
+    void setUp() {
+        given(purchaseTxnService.createPurchaseTxn(any())).willReturn(new PurchaseTxnDto());
+    }
 
     // happy path test
     @Test
@@ -41,6 +55,8 @@ class PurchaseTxnControllerTest {
                                 .content(objectMapper.writeValueAsString(TestHelper.createValidPurchaseTxnDto()))
                 )
                 .andExpect(status().is(201));
+
+        verify(purchaseTxnService, times(1)).createPurchaseTxn(any());
     }
 
     /**

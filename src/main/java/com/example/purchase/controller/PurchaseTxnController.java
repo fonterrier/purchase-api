@@ -4,6 +4,8 @@ import com.example.purchase.api.api.PurchaseTxnApiDelegate;
 import com.example.purchase.api.model.ErrorDetailsDto;
 import com.example.purchase.api.model.PurchaseTxnDto;
 import com.example.purchase.api.model.PurchaseTxnCurrencyDto;
+import com.example.purchase.service.PurchaseTxnService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -15,29 +17,29 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@RequiredArgsConstructor
 @Slf4j
 @Controller
 public class PurchaseTxnController implements PurchaseTxnApiDelegate {
+    private final PurchaseTxnService purchaseTxnService;
 
-    // TODO: dummy implementations for now
     @Override
-    public ResponseEntity postPurchaseTxn(PurchaseTxnDto purchaseTxn) {
+    public ResponseEntity postPurchaseTxn(PurchaseTxnDto dto) {
         log.info("Received postPurchaseTxn request");
 
-        Optional<ErrorDetailsDto> errorDetails = this.isPurchaseTxnDtoValid(purchaseTxn);
+        Optional<ErrorDetailsDto> errorDetails = this.isPurchaseTxnDtoValid(dto);
         if (errorDetails.isPresent()) {
             return ResponseEntity.badRequest()
                     .body(errorDetails.get());
         }
 
-        // TODO: remove placeholder
-        PurchaseTxnDto created = new PurchaseTxnDto();
-        created.setId(UUID.randomUUID());
+        PurchaseTxnDto created = purchaseTxnService.createPurchaseTxn(dto);
 
         return ResponseEntity.created(URI.create("/purchase-txn" + created.getId()))
                 .body(created);
     }
 
+    // TODO: dummy implementations for now
     @Override
     public ResponseEntity<PurchaseTxnCurrencyDto> getPurchaseTxn(UUID id, String countryCurrencyDesc) {
         log.info("Received getPurchaseTxn request");

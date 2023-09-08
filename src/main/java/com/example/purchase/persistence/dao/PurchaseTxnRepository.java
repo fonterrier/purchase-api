@@ -8,7 +8,7 @@ import java.util.UUID;
 
 /**
  * I am normally used to using Ebean ORM at my job.
- *
+ * <p>
  * For purposes of this coding test, using Hibernate/JPA with H2DB in-memory database, as solution should be runnable
  * without installing additional software stack components. Ebean test requires Docker.
  */
