@@ -1,0 +1,157 @@
+openapi: 3.0.3
+info:
+  version: 1.0.0
+  title: Purchase API
+servers:
+  - url: http://localhost:8080/
+paths:
+  /purchase-txn:
+    post:
+      operationId: postPurchaseTxn
+      summary: Store a purchase transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseTxn'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseTxn'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /purchase-txn/{id}:
+    get:
+      operationId: getPurchaseTxn
+      summary: Get purchase transaction in a specified country's currency for the date of the purchase
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: ID of the purchase transaction to be retrieved
+        - name: countryCurrencyDesc
+          in: query
+          description: Currency
+          required: true
+          schema:
+            type: string
+          example: Mexico-Peso
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseTxnCurrency'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/CurrencyRateNotAvailable'
+components:
+  responses:
+    CurrencyRateNotAvailable:
+      description: Currency conversion rate not available for the purchase date
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetails'
+    BadRequest:
+      description: Bad-Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetails'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetails'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetails'
+    NotFound:
+      description: Not-Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetails'
+    ErrorResponse:
+      description: Generic error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetails'
+  schemas:
+    PurchaseTxn:
+      type: object
+      required:
+        - description
+        - txnDate
+        - amount
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique ID of the purchase transaction
+        description:
+          type: string
+          example: moderate rain
+          maxLength: 50
+        txnDate:
+          type: string
+          format: date-time
+          description: Transaction date
+          example: 2019-10-12T07:20:50.52Z
+        amount:
+          type: number
+          description: Non-negative purchase amount in USD rounded to the nearest cent
+          example: 100.00
+    PurchaseTxnCurrency:
+      allOf:
+        - $ref: '#/components/schemas/PurchaseTxn'
+        - type: object
+          properties:
+            countryCurrencyDesc:
+              type: string
+              description: Currency
+              example: Mexico-Peso
+            exchangeRate:
+              type: number
+              description: Currency's exchange rate for the date of the purchase
+              example: 0.5210
+            amountConverted:
+              type: number
+              description: Purchase amount in the supplied currency rounded to the nearest cent.
+              example: 52.10
+    ErrorDetails:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
