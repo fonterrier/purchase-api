@@ -33,8 +33,7 @@ public class CurrencyConversionService {
   private final ObjectMapper objectMapper;
 
   /**
-   * Get the Treasury API response for the country_currency_desc within the date range e.g.
-   * <a
+   * Get the Treasury API response for the country_currency_desc within the date range e.g. <a
    * href="https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/rates_of_exchange?filter=country_currency_desc:in:Mexico-Peso,record_date:gte:2020-01-30,record_date:lte:2020-06-30">...</a>
    *
    * @param dateStart // TODO not clear from Treasure API whether date is in UTC or American timezones. Assume UTC for
@@ -68,7 +67,7 @@ public class CurrencyConversionService {
       // or, when exchange rate not found:
       // e.g. {"data":[],"meta":{"count":0,"labels":{"exchange_rate":"Exchange Rate","record_date":"Record Date"},"dataTypes":{"exchange_rate":"NUMBER","record_date":"DATE"},"dataFormats":{"exchange_rate":"10.2","record_date":"YYYY-MM-DD"},"total-count":0,"total-pages":0},"links":{"self":"&page%5Bnumber%5D=1&page%5Bsize%5D=100","first":"&page%5Bnumber%5D=1&page%5Bsize%5D=100","prev":null,"next":"&page%5Bnumber%5D=2&page%5Bsize%5D=100","last":"&page%5Bnumber%5D=0&page%5Bsize%5D=100"}}
       responseBody = response.body().string();
-      log.info("Received response body: " + responseBody);
+      log.debug("Received response body: " + responseBody);
     }
 
     Optional<BigDecimal> exchangeRate;
@@ -90,9 +89,9 @@ public class CurrencyConversionService {
 
   protected Optional<BigDecimal> getExchangeRateFromResponseBody(String responseBody) throws JsonProcessingException {
     JsonNode data = objectMapper.readTree(responseBody).get("data");
-      if (data.isEmpty()) {
-          return Optional.empty();
-      }
+    if (data.isEmpty()) {
+      return Optional.empty();
+    }
 
     return Optional.of(new BigDecimal(data.get(0).get("exchange_rate").textValue()));
   }
