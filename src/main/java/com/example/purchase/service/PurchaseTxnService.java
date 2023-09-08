@@ -55,7 +55,7 @@ public class PurchaseTxnService {
         txnDate);
     if (optExchangeRate.isEmpty()) {
       throw new HttpClientErrorException(HttpStatus.UNPROCESSABLE_ENTITY,
-          "Missing " + currencyConversionService + " exchange rate for " + txnDate);
+          "Missing " + countryCurrencyDesc + " exchange rate for " + txnDate);
     }
 
     BigDecimal exchangeRate = optExchangeRate.get();
