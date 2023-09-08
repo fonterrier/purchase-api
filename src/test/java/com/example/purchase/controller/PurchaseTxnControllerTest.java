@@ -1,6 +1,7 @@
 package com.example.purchase.controller;
 
 import com.example.purchase.api.model.PurchaseTxnDto;
+import com.example.purchase.support.TestHelper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +11,6 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,7 +38,7 @@ class PurchaseTxnControllerTest {
         this.mockMvc.perform(
                         post(API_PATH)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(createValidPurchaseTxnDto()))
+                                .content(objectMapper.writeValueAsString(TestHelper.createValidPurchaseTxnDto()))
                 )
                 .andExpect(status().is(201));
     }
@@ -59,12 +59,12 @@ class PurchaseTxnControllerTest {
     // check all validations (field length, cents rounding)
     @Test
     void postPurchaseTxn2_invalidParameters_isBadRequest() throws Exception {
-        PurchaseTxnDto dto = createValidPurchaseTxnDto();
+        PurchaseTxnDto dto = TestHelper.createValidPurchaseTxnDto();
         dto.setDescription("Verylonglonglonglongerthan50characterssolonglonglonglonglonglonglonglonglonglong");
         assertEquals(400, performPostPurchaseTxn(dto).getStatus());
 
         // non-negative and 2 decimal places required
-        dto = createValidPurchaseTxnDto();
+        dto = TestHelper.createValidPurchaseTxnDto();
         dto.setAmount(new BigDecimal("0.00"));
         assertEquals(201, performPostPurchaseTxn(dto).getStatus());
         dto.setAmount(new BigDecimal("1379.95"));
@@ -97,16 +97,6 @@ class PurchaseTxnControllerTest {
     @Test
     void getPurchaseTxn_missingParameters_isBadRequest() throws Exception {
         this.mockMvc.perform(get(API_PATH + "/" + UUID.randomUUID())).andExpect(status().is(400));
-    }
-
-    public static PurchaseTxnDto createValidPurchaseTxnDto() {
-        PurchaseTxnDto dto = new PurchaseTxnDto();
-
-        dto.setDescription("Airline ticket from New Zealand to Australia");
-        dto.setTxnDate(OffsetDateTime.parse("2019-10-12T07:20:50.52Z"));
-        dto.setAmount(new BigDecimal("200.00"));
-
-        return dto;
     }
 
 }
