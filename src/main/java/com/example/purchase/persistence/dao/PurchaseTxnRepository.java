@@ -1,10 +1,9 @@
 package com.example.purchase.persistence.dao;
 
 import com.example.purchase.persistence.model.PurchaseTxn;
+import java.util.UUID;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
-
-import java.util.UUID;
 
 /**
  * I am normally used to using Ebean ORM at my job.
@@ -14,4 +13,5 @@ import java.util.UUID;
  */
 @Repository
 public interface PurchaseTxnRepository extends CrudRepository<PurchaseTxn, UUID> {
+
 }

@@ -1,11 +1,23 @@
 package com.example.purchase.controller;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.example.purchase.api.model.ErrorDetailsDto;
 import com.example.purchase.api.model.PurchaseTxnCurrencyDto;
 import com.example.purchase.api.model.PurchaseTxnDto;
 import com.example.purchase.service.PurchaseTxnService;
 import com.example.purchase.support.TestHelper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,127 +29,115 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
 
-import java.math.BigDecimal;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 /**
  * Test controller API input validation and response codes
  */
 @WebMvcTest
 class PurchaseTxnControllerTest {
-    private static final String API_PATH = "/purchase-txn";
 
-    @Autowired
-    private MockMvc mockMvc;
-    @Autowired
-    private ObjectMapper objectMapper;
-    @MockBean
-    private PurchaseTxnService purchaseTxnService;
+  private static final String API_PATH = "/purchase-txn";
 
-    @BeforeEach
-    void setUp() {
-        given(purchaseTxnService.createPurchaseTxn(any())).willReturn(new PurchaseTxnDto());
-    }
+  @Autowired
+  private MockMvc mockMvc;
+  @Autowired
+  private ObjectMapper objectMapper;
+  @MockBean
+  private PurchaseTxnService purchaseTxnService;
 
-    // happy path test
-    @Test
-    void postPurchaseTxn() throws Exception {
-        this.mockMvc.perform(
-                        post(API_PATH)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(TestHelper.createValidPurchaseTxnDto()))
-                )
-                .andExpect(status().is(201));
+  @BeforeEach
+  void setUp() {
+    given(purchaseTxnService.createPurchaseTxn(any())).willReturn(new PurchaseTxnDto());
+  }
 
-        verify(purchaseTxnService, times(1)).createPurchaseTxn(any());
-    }
+  // happy path test
+  @Test
+  void postPurchaseTxn() throws Exception {
+    this.mockMvc.perform(
+            post(API_PATH)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(TestHelper.createValidPurchaseTxnDto()))
+        )
+        .andExpect(status().is(201));
 
-    /**
-     * Advantage of using OpenAPI generator is it automatically generates code to validate required
-     * parameters, parameter formats and restrictions (e.g. length)
-     */
-    @Test
-    void postPurchaseTxn_missingParameters_isBadRequest() throws Exception {
-        this.mockMvc.perform(
-                        post(API_PATH)
-                                .contentType(MediaType.APPLICATION_JSON)
-                )
-                .andExpect(status().is(400));
-    }
+    verify(purchaseTxnService, times(1)).createPurchaseTxn(any());
+  }
 
-    // check all validations (field length, cents rounding)
-    @Test
-    void postPurchaseTxn_invalidParameters_isBadRequest() throws Exception {
-        PurchaseTxnDto dto = TestHelper.createValidPurchaseTxnDto();
-        dto.setDescription("Verylonglonglonglongerthan50characterssolonglonglonglonglonglonglonglonglonglong");
-        assertEquals(400, performPostPurchaseTxn(dto).getStatus());
+  /**
+   * Advantage of using OpenAPI generator is it automatically generates code to validate required parameters, parameter
+   * formats and restrictions (e.g. length)
+   */
+  @Test
+  void postPurchaseTxn_missingParameters_isBadRequest() throws Exception {
+    this.mockMvc.perform(
+            post(API_PATH)
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+        .andExpect(status().is(400));
+  }
 
-        // non-negative and 2 decimal places required
-        dto = TestHelper.createValidPurchaseTxnDto();
-        dto.setAmount(new BigDecimal("0.00"));
-        assertEquals(201, performPostPurchaseTxn(dto).getStatus());
-        dto.setAmount(new BigDecimal("1379.95"));
-        assertEquals(201, performPostPurchaseTxn(dto).getStatus());
-        dto.setAmount(new BigDecimal("1379"));
-        assertEquals(201, performPostPurchaseTxn(dto).getStatus());
-        dto.setAmount(new BigDecimal("-5.00"));
-        assertEquals(400, performPostPurchaseTxn(dto).getStatus());
-        dto.setAmount(new BigDecimal("7.034"));
-        assertEquals(400, performPostPurchaseTxn(dto).getStatus());
-    }
+  // check all validations (field length, cents rounding)
+  @Test
+  void postPurchaseTxn_invalidParameters_isBadRequest() throws Exception {
+    PurchaseTxnDto dto = TestHelper.createValidPurchaseTxnDto();
+    dto.setDescription("Verylonglonglonglongerthan50characterssolonglonglonglonglonglonglonglonglonglong");
+    assertEquals(400, performPostPurchaseTxn(dto).getStatus());
 
-    private MockHttpServletResponse performPostPurchaseTxn(PurchaseTxnDto content) throws Exception {
-        return this.mockMvc.perform(
-                post(API_PATH)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(content))).andReturn().getResponse();
-    }
+    // non-negative and 2 decimal places required
+    dto = TestHelper.createValidPurchaseTxnDto();
+    dto.setAmount(new BigDecimal("0.00"));
+    assertEquals(201, performPostPurchaseTxn(dto).getStatus());
+    dto.setAmount(new BigDecimal("1379.95"));
+    assertEquals(201, performPostPurchaseTxn(dto).getStatus());
+    dto.setAmount(new BigDecimal("1379"));
+    assertEquals(201, performPostPurchaseTxn(dto).getStatus());
+    dto.setAmount(new BigDecimal("-5.00"));
+    assertEquals(400, performPostPurchaseTxn(dto).getStatus());
+    dto.setAmount(new BigDecimal("7.034"));
+    assertEquals(400, performPostPurchaseTxn(dto).getStatus());
+  }
 
-    // happy path test
-    @Test
-    void getPurchaseTxn() throws Exception {
-        given(purchaseTxnService.getPurchaseTxnCurrency(any(), any())).willReturn(new PurchaseTxnCurrencyDto());
+  private MockHttpServletResponse performPostPurchaseTxn(PurchaseTxnDto content) throws Exception {
+    return this.mockMvc.perform(
+        post(API_PATH)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(content))).andReturn().getResponse();
+  }
 
-        MockHttpServletResponse response = this.mockMvc.perform(
-                        get(API_PATH + "/" + UUID.randomUUID())
-                                .queryParam("countryCurrencyDesc", "Mexico-Peso")
-                )
-                .andExpect(status().is(200))
-                .andReturn().getResponse();
+  // happy path test
+  @Test
+  void getPurchaseTxn() throws Exception {
+    given(purchaseTxnService.getPurchaseTxnCurrency(any(), any())).willReturn(new PurchaseTxnCurrencyDto());
 
-        assertNotNull(objectMapper.readValue(response.getContentAsString(), PurchaseTxnCurrencyDto.class));
-    }
+    MockHttpServletResponse response = this.mockMvc.perform(
+            get(API_PATH + "/" + UUID.randomUUID())
+                .queryParam("countryCurrencyDesc", "Mexico-Peso")
+        )
+        .andExpect(status().is(200))
+        .andReturn().getResponse();
 
-    @Test
-    void getPurchaseTxn_missingParameters_isBadRequest() throws Exception {
-        this.mockMvc.perform(get(API_PATH + "/" + UUID.randomUUID())).andExpect(status().is(400));
-    }
+    assertNotNull(objectMapper.readValue(response.getContentAsString(), PurchaseTxnCurrencyDto.class));
+  }
 
-    @Test
-    void getPurchaseTxn_httpException() throws Exception {
-        HttpClientErrorException ex = new HttpClientErrorException(HttpStatus.NOT_FOUND, "msg");
-        given(purchaseTxnService.getPurchaseTxnCurrency(any(), any())).willThrow(ex);
+  @Test
+  void getPurchaseTxn_missingParameters_isBadRequest() throws Exception {
+    this.mockMvc.perform(get(API_PATH + "/" + UUID.randomUUID())).andExpect(status().is(400));
+  }
 
-        MockHttpServletResponse response = this.mockMvc.perform(
-                        get(API_PATH + "/" + UUID.randomUUID())
-                                .queryParam("countryCurrencyDesc", "Mexico-Peso")
-                )
-                .andExpect(status().is(404))
-                .andReturn().getResponse();
+  @Test
+  void getPurchaseTxn_httpException() throws Exception {
+    HttpClientErrorException ex = new HttpClientErrorException(HttpStatus.NOT_FOUND, "msg");
+    given(purchaseTxnService.getPurchaseTxnCurrency(any(), any())).willThrow(ex);
 
-        ErrorDetailsDto errorDetails = objectMapper.readValue(response.getContentAsString(), ErrorDetailsDto.class);
-        assertEquals(404, errorDetails.getCode());
-        assertEquals("msg", errorDetails.getMessage());
-    }
+    MockHttpServletResponse response = this.mockMvc.perform(
+            get(API_PATH + "/" + UUID.randomUUID())
+                .queryParam("countryCurrencyDesc", "Mexico-Peso")
+        )
+        .andExpect(status().is(404))
+        .andReturn().getResponse();
+
+    ErrorDetailsDto errorDetails = objectMapper.readValue(response.getContentAsString(), ErrorDetailsDto.class);
+    assertEquals(404, errorDetails.getCode());
+    assertEquals("msg", errorDetails.getMessage());
+  }
 
 }

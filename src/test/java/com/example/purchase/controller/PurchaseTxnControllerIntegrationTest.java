@@ -1,5 +1,15 @@
 package com.example.purchase.controller;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.example.purchase.api.model.ErrorDetailsDto;
 import com.example.purchase.api.model.PurchaseTxnCurrencyDto;
 import com.example.purchase.api.model.PurchaseTxnDto;
@@ -10,6 +20,9 @@ import com.example.purchase.service.CurrencyConversionService;
 import com.example.purchase.service.PurchaseTxnService;
 import com.example.purchase.support.TestHelper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -19,93 +32,81 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.math.BigDecimal;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 /**
- * Test controller integration tests (using actual in-memory test DB)
- * Run during mvn verify stage
+ * Test controller integration tests (using actual in-memory test DB) Run during mvn verify stage
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 // @AutoConfigureTestDatabase // use embedded database instead of real database
 class PurchaseTxnControllerIntegrationTest {
-    private static final String API_PATH = "/purchase-txn";
 
-    @Autowired
-    private MockMvc mockMvc;
-    @Autowired
-    private ObjectMapper objectMapper;
-    @SpyBean
-    private PurchaseTxnService purchaseTxnService;
-    @SpyBean
-    private PurchaseTxnRepository repository;
-    @SpyBean
-    private CurrencyConversionService currencyConversionService;
+  private static final String API_PATH = "/purchase-txn";
 
-    // happy path test
-    @Test
-    void postAndGetPurchaseTxn() throws Exception {
-        // POST test
-        PurchaseTxnDto sentDto = TestHelper.createValidPurchaseTxnDto();
+  @Autowired
+  private MockMvc mockMvc;
+  @Autowired
+  private ObjectMapper objectMapper;
+  @SpyBean
+  private PurchaseTxnService purchaseTxnService;
+  @SpyBean
+  private PurchaseTxnRepository repository;
+  @SpyBean
+  private CurrencyConversionService currencyConversionService;
 
-        MockHttpServletResponse response = this.mockMvc.perform(
-                        post(API_PATH)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(sentDto))
-                )
-                .andExpect(status().is(201))
-                .andReturn().getResponse();
+  // happy path test
+  @Test
+  void postAndGetPurchaseTxn() throws Exception {
+    // POST test
+    PurchaseTxnDto sentDto = TestHelper.createValidPurchaseTxnDto();
 
-        verify(purchaseTxnService, times(1)).createPurchaseTxn(any());
-        verify(repository, times(1)).save(any());
-        assertEquals(1L, repository.count());
-        PurchaseTxn stored = repository.findAll().iterator().next();
-        PurchaseTxnDto recvDto = objectMapper.readValue(response.getContentAsString(), PurchaseTxnDto.class);
+    MockHttpServletResponse response = this.mockMvc.perform(
+            post(API_PATH)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(sentDto))
+        )
+        .andExpect(status().is(201))
+        .andReturn().getResponse();
 
-        assertNotNull(recvDto.getId());
-        assertEquals(PurchaseTxnMapper.INSTANCE.purchaseTxnToDto(stored), recvDto);
-        recvDto.setId(null);
-        assertEquals(sentDto, recvDto);
+    verify(purchaseTxnService, times(1)).createPurchaseTxn(any());
+    verify(repository, times(1)).save(any());
+    assertEquals(1L, repository.count());
+    PurchaseTxn stored = repository.findAll().iterator().next();
+    PurchaseTxnDto recvDto = objectMapper.readValue(response.getContentAsString(), PurchaseTxnDto.class);
 
-        // GET test
-        // integration test would not normally call external API, because response apt to change
-        // also CI/CD pipeline may have network restrictions for security reasons
-        doReturn(Optional.of(new BigDecimal("0.121111113")))
-                .when(currencyConversionService).getExchangeRate(any(), any(), any());
+    assertNotNull(recvDto.getId());
+    assertEquals(PurchaseTxnMapper.INSTANCE.purchaseTxnToDto(stored), recvDto);
+    recvDto.setId(null);
+    assertEquals(sentDto, recvDto);
 
-        response = this.mockMvc.perform(
-                        get(API_PATH + "/" + stored.getId())
-                                .queryParam("countryCurrencyDesc", "Mexico-Peso")
-                )
-                .andExpect(status().is(200))
-                .andReturn().getResponse();
+    // GET test
+    // integration test would not normally call external API, because response apt to change
+    // also CI/CD pipeline may have network restrictions for security reasons
+    doReturn(Optional.of(new BigDecimal("0.121111113")))
+        .when(currencyConversionService).getExchangeRate(any(), any(), any());
 
-        assertNotNull(objectMapper.readValue(response.getContentAsString(), PurchaseTxnCurrencyDto.class));
-    }
+    response = this.mockMvc.perform(
+            get(API_PATH + "/" + stored.getId())
+                .queryParam("countryCurrencyDesc", "Mexico-Peso")
+        )
+        .andExpect(status().is(200))
+        .andReturn().getResponse();
 
-    @Test
-    void getPurchaseTxn_notFound() throws Exception {
-        UUID nonExistentId = UUID.randomUUID();
-        MockHttpServletResponse response = this.mockMvc.perform(
-                        get(API_PATH + "/" + nonExistentId)
-                                .queryParam("countryCurrencyDesc", "Mexico-Peso")
-                )
-                .andExpect(status().is(404))
-                .andReturn().getResponse();
+    assertNotNull(objectMapper.readValue(response.getContentAsString(), PurchaseTxnCurrencyDto.class));
+  }
 
-        ErrorDetailsDto errorDetails = objectMapper.readValue(response.getContentAsString(), ErrorDetailsDto.class);
-        assertEquals(404, errorDetails.getCode());
-        assertEquals("PurchaseTxn with id=" + nonExistentId + " not found in database", errorDetails.getMessage());
-    }
+  @Test
+  void getPurchaseTxn_notFound() throws Exception {
+    UUID nonExistentId = UUID.randomUUID();
+    MockHttpServletResponse response = this.mockMvc.perform(
+            get(API_PATH + "/" + nonExistentId)
+                .queryParam("countryCurrencyDesc", "Mexico-Peso")
+        )
+        .andExpect(status().is(404))
+        .andReturn().getResponse();
+
+    ErrorDetailsDto errorDetails = objectMapper.readValue(response.getContentAsString(), ErrorDetailsDto.class);
+    assertEquals(404, errorDetails.getCode());
+    assertEquals("PurchaseTxn with id=" + nonExistentId + " not found in database", errorDetails.getMessage());
+  }
 
 }
